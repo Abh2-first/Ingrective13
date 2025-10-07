@@ -13,36 +13,40 @@ export default function Scan() {
     setResult(null);
     setError("");
   };
+const handleAnalyze = async () => {
+  if (!file) {
+    setError("Please choose an image first.");
+    return;
+  }
 
-  const handleAnalyze = async () => {
-    if (!file) {
-      setError("Please choose an image first.");
-      return;
-    }
+  try {
+    setLoading(true);
+    setError("");
 
-    try {
-      setLoading(true);
-      setError("");
+    // ✅ Send as real file (not JSON)
+    const formData = new FormData();
+    formData.append("data", file);
 
-      const base64 = await toBase64(file);
+    const response = await fetch(
+      "https://Tigerabhay-Ingrective5.hf.space/run/predict",
+      {
+        method: "POST",
+        body: formData,
+      }
+    );
 
-      const response = await fetch(
-        "https://Tigerabhay-Ingrective5.hf.space/run/predict",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ data: [base64] }),
-        }
-      );
+    const data = await response.json();
+    console.log("Response:", data);
 
-      const data = await response.json();
-      setResult(data?.data ? data.data[0] : "No readable output.");
-    } catch (err) {
-      setError("Something went wrong while analyzing the image.");
-    } finally {
-      setLoading(false);
-    }
-  };
+    setResult(data?.data ? data.data[0] : "No readable output.");
+  } catch (err) {
+    console.error("Error:", err);
+    setError("Something went wrong while analyzing the image.");
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   const toBase64 = (file) =>
     new Promise((resolve, reject) => {
