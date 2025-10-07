@@ -23,21 +23,15 @@ const handleAnalyze = async () => {
     setLoading(true);
     setError("");
 
-    // ✅ Send as real file (not JSON)
     const formData = new FormData();
     formData.append("data", file);
 
-    const response = await fetch(
-      "https://Tigerabhay-Ingrective5.hf.space/run/predict",
-      {
-        method: "POST",
-        body: formData,
-      }
-    );
+    const response = await fetch("/api/predict", {
+      method: "POST",
+      body: formData,
+    });
 
     const data = await response.json();
-    console.log("Response:", data);
-
     setResult(data?.data ? data.data[0] : "No readable output.");
   } catch (err) {
     console.error("Error:", err);
@@ -46,7 +40,6 @@ const handleAnalyze = async () => {
     setLoading(false);
   }
 };
-
 
   const toBase64 = (file) =>
     new Promise((resolve, reject) => {
