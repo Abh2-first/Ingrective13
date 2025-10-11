@@ -1,29 +1,28 @@
-export const config = {
-  api: {
-    bodyParser: false,
-  },
-};
-
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Only POST requests allowed" });
   }
 
   try {
-    // Forward the uploaded image directly to your Hugging Face Space
+    const { image } = req.body;
+
+    // Connect to your new Hugging Face Space
     const response = await fetch(
-      "https://Tigerabhay-Ingrective5.hf.space/run/predict",
+      "https://api-inference.huggingface.co/models/Gamger6/Ingrective",
       {
         method: "POST",
-        headers: req.headers,
-        body: req, // stream file directly
+        headers: {
+          Authorization: `Bearer ${process.env.HUGGINGFACE_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ inputs: image }),
       }
     );
 
-    const result = await response.text();
-    res.status(200).send(result);
-  } catch (err) {
-    console.error("Proxy error:", err);
-    res.status(500).json({ error: "Failed to reach Hugging Face API" });
+    const result = await response.json();
+    res.status(200).json(result);
+  } catch (error) {
+    console.error("Error calling Hugging Face API:", error);
+    res.status(500).json({ error: "Failed to analyze image." });
   }
 }
