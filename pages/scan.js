@@ -1,147 +1,114 @@
-import { useState } from "react";
-import Navbar from "../components/Navbar";
-import Footer from "../components/Footer";
+import React, { useState } from "react";
 
-export default function Scan() {
+export default function ScanPage() {
   const [file, setFile] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState(null);
+  const [result, setResult] = useState("");
   const [error, setError] = useState("");
 
-  const handleUpload = (e) => {
+  // Handle file selection
+  const handleFileChange = (e) => {
     setFile(e.target.files[0]);
-    setResult(null);
+    setResult("");
     setError("");
   };
-const handleAnalyze = async () => {
-  if (!file) {
-    setError("Please choose an image first.");
-    return;
-  }
 
-  try {
-    setLoading(true);
-    setError("");
+  // Handle image analysis
+  const handleAnalyze = async () => {
+    if (!file) {
+      setError("Please choose an image first!");
+      return;
+    }
 
-    const formData = new FormData();
-    formData.append("data", file);
+    try {
+      setLoading(true);
+      setError("");
+      setResult("");
 
-    const response = await fetch("/api/predict", {
-      method: "POST",
-      body: formData,
-    });
-
-    const data = await response.json();
-    setResult(data?.data ? data.data[0] : "No readable output.");
-  } catch (err) {
-    console.error("Error:", err);
-    setError("Something went wrong while analyzing the image.");
-  } finally {
-    setLoading(false);
-  }
-};
-
-  const toBase64 = (file) =>
-    new Promise((resolve, reject) => {
       const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = () => resolve(reader.result);
-      reader.onerror = (error) => reject(error);
-    });
+      reader.onloadend = async () => {
+        const base64 = reader.result.split(",")[1];
 
-  const getScoreColor = (score) => {
-    if (score > 75) return "bg-green-500";
-    if (score > 50) return "bg-yellow-400";
-    if (score > 25) return "bg-orange-500";
-    return "bg-red-500";
+        const response = await fetch("/api/predict", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ image: base64 }),
+        });
+
+        if (!response.ok) {
+          throw new Error("Failed to analyze image.");
+        }
+
+        const data = await response.json();
+        setResult(JSON.stringify(data, null, 2));
+      };
+
+      reader.readAsDataURL(file);
+    } catch (err) {
+      console.error(err);
+      setError("Something went wrong while analyzing.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <>
-      <Navbar />
-      <main className="max-w-6xl mx-auto py-16 px-4">
-        <h2 className="text-3xl font-bold text-brand-700 mb-6 text-center">
-          Smart Food Label Scanner 🍎
-        </h2>
+    <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 flex flex-col items-center justify-center p-6 text-white">
+      <div className="max-w-xl w-full bg-white/10 backdrop-blur-lg rounded-2xl p-8 shadow-2xl">
+        <h1 className="text-3xl font-extrabold text-center mb-6 text-yellow-300">
+          🍽️ Ingrective Scanner
+        </h1>
 
-        <div className="bg-white shadow-xl rounded-2xl p-8 text-center border border-gray-100">
-          <p className="text-gray-600 mb-6">
-            Upload your food label to get a simple breakdown of ingredients and health score.
-          </p>
+        <p className="text-center text-sm text-gray-200 mb-6">
+          Upload the **backside of a product** to check ingredients and how they
+          match your health preferences.
+        </p>
 
+        {/* File Input */}
+        <div className="flex flex-col items-center mb-6">
           <input
             type="file"
             accept="image/*"
-            onChange={handleUpload}
-            className="block mx-auto mb-4 border rounded-lg p-2"
+            onChange={handleFileChange}
+            className="block w-full text-sm text-gray-300 bg-gray-800 border border-gray-700 rounded-lg cursor-pointer p-2"
           />
+        </div>
 
+        {/* Analyze Button */}
+        <div className="flex justify-center">
           <button
             onClick={handleAnalyze}
             disabled={loading}
-            className="bg-brand-500 hover:bg-brand-700 text-white px-6 py-3 rounded-lg font-semibold disabled:opacity-60"
+            className={`px-6 py-3 rounded-lg font-semibold transition-all duration-300 ${
+              loading
+                ? "bg-gray-400 cursor-not-allowed"
+                : "bg-yellow-400 hover:bg-yellow-500 text-gray-900"
+            }`}
           >
-            {loading ? "Analyzing..." : "Analyze Label"}
+            {loading ? "Analyzing..." : "🔍 Scan Product"}
           </button>
-
-          {error && <p className="text-red-500 mt-4">{error}</p>}
-
-          {result && (
-            <div className="mt-10 text-left bg-gradient-to-br from-blue-50 to-purple-100 p-8 rounded-2xl shadow-inner">
-              <h3 className="text-2xl font-semibold mb-4 text-brand-700">🧾 Analysis Result</h3>
-
-              {/* Example health score display */}
-              <div className="mb-6">
-                <p className="text-gray-800 font-medium mb-2">Overall Health Score</p>
-                <div className="w-full bg-gray-200 rounded-full h-4">
-                  <div
-                    className={`${getScoreColor(68)} h-4 rounded-full`}
-                    style={{ width: `68%` }}
-                  ></div>
-                </div>
-                <p className="text-sm text-gray-500 mt-1">Example: 68 / 100 (Moderate)</p>
-              </div>
-
-              {/* Ingredient Breakdown */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
-                <div className="p-4 bg-green-100 border-l-4 border-green-500 rounded-lg">
-                  <h4 className="font-semibold text-green-700">✅ Healthy Ingredients</h4>
-                  <ul className="list-disc ml-5 text-sm text-gray-700">
-                    <li>Whole grains</li>
-                    <li>Natural flavors</li>
-                    <li>Vitamin B12</li>
-                  </ul>
-                </div>
-
-                <div className="p-4 bg-yellow-100 border-l-4 border-yellow-500 rounded-lg">
-                  <h4 className="font-semibold text-yellow-700">⚠️ Caution</h4>
-                  <ul className="list-disc ml-5 text-sm text-gray-700">
-                    <li>Added sugar (3%)</li>
-                    <li>Sodium (150mg)</li>
-                  </ul>
-                </div>
-
-                <div className="p-4 bg-red-100 border-l-4 border-red-500 rounded-lg">
-                  <h4 className="font-semibold text-red-700">🚫 Harmful</h4>
-                  <ul className="list-disc ml-5 text-sm text-gray-700">
-                    <li>Artificial preservatives</li>
-                    <li>High fructose syrup</li>
-                  </ul>
-                </div>
-              </div>
-
-              {/* Raw AI Output */}
-              <div className="mt-10">
-                <h4 className="font-semibold text-gray-700 mb-2">Raw AI Output</h4>
-                <pre className="bg-white text-gray-800 p-4 rounded-lg text-sm overflow-x-auto">
-                  {typeof result === "string" ? result : JSON.stringify(result, null, 2)}
-                </pre>
-              </div>
-            </div>
-          )}
         </div>
-      </main>
-      <Footer />
-    </>
+
+        {/* Error Message */}
+        {error && (
+          <p className="text-red-400 text-center mt-4 font-medium">{error}</p>
+        )}
+
+        {/* Result Section */}
+        {result && (
+          <div className="mt-6 bg-gray-900/60 p-4 rounded-lg text-sm font-mono overflow-auto max-h-64">
+            <h2 className="text-yellow-300 font-semibold mb-2">
+              🧠 Analysis Result:
+            </h2>
+            <pre className="text-gray-200 whitespace-pre-wrap">{result}</pre>
+          </div>
+        )}
+      </div>
+
+      {/* Footer */}
+      <footer className="mt-8 text-sm text-gray-200 opacity-80">
+        Made with ❤️ by <span className="text-yellow-300">Team Ingrective</span>
+      </footer>
+    </div>
   );
 }
